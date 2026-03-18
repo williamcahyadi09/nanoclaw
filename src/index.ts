@@ -415,6 +415,28 @@ async function startMessageLoop(): Promise<void> {
             allPending.length > 0 ? allPending : groupMessages;
           const formatted = formatMessages(messagesToSend, TIMEZONE);
 
+          // Refresh snapshots before piping so container sees latest tasks/groups
+          const pipeTasks = getAllTasks();
+          writeTasksSnapshot(
+            group.folder,
+            isMainGroup,
+            pipeTasks.map((t) => ({
+              id: t.id,
+              groupFolder: t.group_folder,
+              prompt: t.prompt,
+              schedule_type: t.schedule_type,
+              schedule_value: t.schedule_value,
+              status: t.status,
+              next_run: t.next_run,
+            })),
+          );
+          writeGroupsSnapshot(
+            group.folder,
+            isMainGroup,
+            getAvailableGroups(),
+            new Set(Object.keys(registeredGroups)),
+          );
+
           if (queue.sendMessage(chatJid, formatted)) {
             logger.debug(
               { chatJid, count: messagesToSend.length },
